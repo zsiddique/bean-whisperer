@@ -1,0 +1,56 @@
+{
+  "label": "Sir Lancelot's Lever",
+  "type": "pro",
+  "description": "Lance Hedricks Lever Style Profile",
+  "temperature": 82,
+  "phases": [
+    {
+      "name": "Pump",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 30,
+      "temperature": 0,
+      "transition": {
+        "type": "instant",
+        "duration": 0,
+        "adaptive": true
+      },
+      "pump": {
+        "target": "pressure",
+        "pressure": 10,
+        "flow": 0
+      },
+      "targets": [
+        {
+          "type": "pressure",
+          "operator": "gte",
+          "value": 9
+        }
+      ]
+    },
+    {
+      "name": "Bloom",
+      "phase": "preinfusion",
+      "valve": 1,
+      "duration": 40,
+      "temperature": 75,
+      "transition": {
+        "type": "instant",
+        "duration": 0,
+        "adaptive": true
+      },
+      "pump": {
+        "target": "flow",
+        "pressure": 0,
+        "flow": 1.8
+      },
+      "targets": [
+        {
+          "type": "volumetric",
+          "operator": "gte",
+          "value": 33
+        }
+      ]
+    }
+  ]
+}
