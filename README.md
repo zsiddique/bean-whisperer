@@ -9,9 +9,47 @@ Generate, manage, and deploy espresso brew profiles for [GaggiMate](https://gagg
 3. **Browse community profiles** from the GaggiMate Discord `#profiles` channel
 4. **Push profiles directly to your machine** via WebSocket — saved, favorited, and selected in one command
 
-## Quick Start
+## Setup
 
-### Requirements
+### As an OpenClaw Skill (Recommended)
+
+If you use [OpenClaw](https://github.com/openclaw/openclaw), install as a workspace skill:
+
+```bash
+# Clone into your workspace skills directory
+cd ~/.openclaw/workspace/skills
+git clone git@github.com:zsiddique/gaggimate-brew.git
+```
+
+That's it. OpenClaw auto-discovers skills in `workspace/skills/` via the `SKILL.md` frontmatter. You can now talk to your agent naturally:
+
+- Send a **photo of a bean bag** → agent identifies it and generates a profile
+- Say **"new bean: Onyx Tropical Weather"** → agent researches it and creates a profile
+- Say **"find me a lever profile for dark roast"** → agent searches Discord community profiles
+- Say **"it was a bit sour"** → agent adjusts the profile and re-pushes
+
+The agent handles the full pipeline: identify → generate → explain → push to machine → iterate based on taste feedback.
+
+#### Environment Variables
+
+Store these in your shell profile or OpenClaw config:
+
+```bash
+# Optional: override default hostname (default: gaggimate.local)
+export GAGGIMATE_HOST=192.168.1.100
+
+# Required for Discord community profile browsing
+export DISCORD_TOKEN="your-discord-user-token"
+# Or store in: ~/.config/gaggimate/discord-token
+```
+
+#### DNS Setup
+
+If your GaggiMate isn't reachable at `gaggimate.local` (e.g., mDNS doesn't work from your server), add a DNS entry or use the IP directly via `GAGGIMATE_HOST`.
+
+### Standalone (No OpenClaw)
+
+Install dependencies:
 
 ```bash
 pip install websockets aiohttp
@@ -67,7 +105,7 @@ export GAGGIMATE_HOST=192.168.1.100
 
 ### Browse Discord Community Profiles
 
-Search and download profiles shared by the GaggiMate community on Discord:
+Search and download profiles shared by the GaggiMate community on Discord. This is exactly what Lance Hedrick does in [his GaggiMate video](https://www.youtube.com/watch?v=kUSZC_R3M8s) — he pulled "Sir Lancelot's Lever" from the Discord `#profiles` channel and imported it directly onto his Silvia.
 
 ```bash
 # Set your Discord token (user token from browser DevTools)
