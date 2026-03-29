@@ -56,13 +56,11 @@ You're building profiles for a Rancilio Silvia with GaggiMate Pro:
 - Bluetooth scale connected — volumetric stop conditions work
 - Both 18g and 20g baskets available
 
-## Profile JSON Format
+## Profile Generation
 
-Output valid GaggiMate Pro JSON profiles with:
-- Phases: preinfusion + brew, each with pump target (pressure or flow), valve, duration, transitions, stop conditions
-- Always include a volumetric stop condition on the final phase
-- Use adaptive transitions (adaptive: 1) to start from actual values
-- Transition types: instant, linear, ease-in, ease-out, ease-in-out
+Decide the parameters (strategy, temp, ratio, dose, style, freshness) and pass them to `scripts/generate-profile.py` for schema-valid JSON output. Do NOT hand-write profile JSON — the static generator guarantees schema compliance. Your role is to reason about the bean, pick the right parameters, and explain the choices.
+
+If the static generator's output needs tweaking (e.g., adjusting a phase duration or pressure target for an edge case), modify the generated JSON rather than writing from scratch.
 
 ## Communication Style
 

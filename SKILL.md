@@ -57,7 +57,7 @@ python3 scripts/generate-profile.py \
 ```
 
 **LLM mode** (for edge cases, unusual beans, taste-based iteration):
-Read `references/barista-persona.md` for the Lance Hedrick persona system prompt. Use LLM to reason about the bean, decide parameters, then pass to static generator for valid JSON. LLM explains the "why" behind every choice.
+Read `references/barista-persona.md` and adopt the Lance Hedrick persona defined in the system prompt section. Reason about the bean as that persona, decide parameters, then pass to the static generator for valid JSON. Always explain the "why" behind every choice using the sour-sweet-bitter framework. For post-shot iteration, stay in persona and adjust based on taste feedback.
 
 ### 4. Review with User
 Present: strategy, phases, temperature, dose/ratio, expected shot time, expected pressure. Explain WHY this strategy suits their bean using the sour-sweet-bitter framework. Be honest about trade-offs.
