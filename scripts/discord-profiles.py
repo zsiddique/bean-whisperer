@@ -46,19 +46,23 @@ def get_token() -> str:
 HEADERS = {}
 
 
-def init():
+def init() -> None:
     global HEADERS
     token = get_token()
     HEADERS = {"Authorization": token}
 
 
 class DiscordAPIError(Exception):
-    def __init__(self, status, message=""):
+    def __init__(self, status: int, message: str = "") -> None:
         self.status = status
         super().__init__(f"Discord API {status}: {message}")
 
 
-async def api_get(session: aiohttp.ClientSession, path: str) -> dict | list:
+MAX_RETRIES = 5
+MAX_RETRY_AFTER = 60
+
+
+async def api_get(session: aiohttp.ClientSession, path: str, _retries: int = 0) -> dict | list:
     url = f"{API_BASE}{path}"
     async with session.get(url, headers=HEADERS) as resp:
         if resp.status == 401:
@@ -66,10 +70,12 @@ async def api_get(session: aiohttp.ClientSession, path: str) -> dict | list:
         if resp.status == 403:
             raise DiscordAPIError(403, "No access")
         if resp.status == 429:
-            retry = int(resp.headers.get("Retry-After", "5"))
-            print(f"Rate limited, waiting {retry}s...", file=sys.stderr)
+            if _retries >= MAX_RETRIES:
+                raise DiscordAPIError(429, "Rate limit exceeded after retries")
+            retry = min(int(resp.headers.get("Retry-After", "5")), MAX_RETRY_AFTER)
+            print(f"Rate limited, waiting {retry}s (attempt {_retries + 1}/{MAX_RETRIES})...", file=sys.stderr)
             await asyncio.sleep(retry)
-            return await api_get(session, path)
+            return await api_get(session, path, _retries + 1)
         if resp.status != 200:
             raise DiscordAPIError(resp.status, await resp.text())
         return await resp.json()
@@ -132,8 +138,9 @@ async def fetch_thread_attachments(session: aiohttp.ClientSession, thread_id: st
     try:
         msg = await api_get(session, f"/channels/{thread_id}/messages/{thread_id}")
         _collect(msg)
-    except Exception:
-        pass
+    except DiscordAPIError as e:
+        if e.status != 404:
+            print(f"Warning: could not fetch OP message: {e}", file=sys.stderr)
 
     # Paginate through all messages (100 per page, backwards using before=)
     before = None
@@ -222,7 +229,8 @@ async def cmd_download(thread_id: str) -> None:
     for a in atts:
         profile = await download_attachment(a["url"])
         if profile:
-            outpath = PROFILES_DIR / a["filename"]
+            safe_name = Path(a["filename"]).name
+            outpath = PROFILES_DIR / safe_name
             with open(outpath, "w") as f:
                 json.dump(profile, f, indent=2)
             print(f"  ✅ {a['filename']}: {summarize_profile(profile)}")
@@ -245,10 +253,10 @@ async def cmd_download_all(limit: int = 50) -> None:
                     break
                 profile = await download_attachment(a["url"])
                 if profile:
-                    fname = a["filename"]
+                    fname = Path(a["filename"]).name
                     outpath = PROFILES_DIR / fname
                     if outpath.exists():
-                        outpath = PROFILES_DIR / f"{outpath.stem}_{t['id'][:8]}{outpath.suffix}"
+                        outpath = PROFILES_DIR / f"{Path(fname).stem}_{t['id'][:8]}{Path(fname).suffix}"
                     with open(outpath, "w") as f:
                         json.dump(profile, f, indent=2)
                     label = profile.get("label", "unnamed")
@@ -307,7 +315,7 @@ async def cmd_recommend(roast: str, origin: str = "") -> None:
     print(f"\n{len(scored)} potential match(es)")
 
 
-def main():
+def main() -> None:
     init()
 
     if len(sys.argv) < 2:

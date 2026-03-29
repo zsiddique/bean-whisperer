@@ -368,7 +368,10 @@ def _low_contact_phases(dose: int, target_weight: float, temp: float, roast: str
     ]
 
 
-def main():
+MAX_LABEL_LENGTH = 64
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Generate GaggiMate Pro profile (Lance Hedrick methodology)")
     parser.add_argument("--label", required=True)
     parser.add_argument("--roast", required=True, choices=["light", "medium-light", "medium", "medium-dark", "dark"])
@@ -387,6 +390,17 @@ def main():
     parser.add_argument("--output", default="-")
 
     args = parser.parse_args()
+
+    # Validate label — sent to IoT device over WebSocket
+    label = args.label.strip()
+    if not label:
+        print("ERROR: --label cannot be empty", file=sys.stderr)
+        sys.exit(1)
+    if len(label) > MAX_LABEL_LENGTH:
+        print(f"ERROR: --label too long ({len(label)} chars, max {MAX_LABEL_LENGTH})", file=sys.stderr)
+        sys.exit(1)
+    # Strip control characters
+    args.label = "".join(c for c in label if c.isprintable())
 
     # Auto-fill defaults using Lance's methodology
     if args.dose == 0:

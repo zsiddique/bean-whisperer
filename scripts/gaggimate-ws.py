@@ -61,7 +61,7 @@ async def send_and_receive(msg: dict) -> dict:
         sys.exit(1)
 
 
-async def list_profiles():
+async def list_profiles() -> None:
     result = await send_and_receive({"tp": "req:profiles:list"})
     if "error" in result:
         print(f"Error: {result['error']}", file=sys.stderr)
@@ -79,7 +79,7 @@ async def list_profiles():
     print(f"\n{len(profiles)} profile(s) total")
 
 
-async def get_profile(profile_id: str):
+async def get_profile(profile_id: str) -> None:
     result = await send_and_receive({"tp": "req:profiles:load", "id": profile_id})
     if "error" in result:
         print(f"Error: {result['error']}", file=sys.stderr)
@@ -103,7 +103,7 @@ async def save_profile(filepath: str) -> dict:
     return saved
 
 
-async def favorite_profile(profile_id: str):
+async def favorite_profile(profile_id: str) -> None:
     result = await send_and_receive({"tp": "req:profiles:favorite", "id": profile_id})
     if result.get("error"):
         print(f"Error: {result['error']}", file=sys.stderr)
@@ -111,7 +111,7 @@ async def favorite_profile(profile_id: str):
     print(f"Favorited: {profile_id[:8]}")
 
 
-async def select_profile(profile_id: str):
+async def select_profile(profile_id: str) -> None:
     result = await send_and_receive({"tp": "req:profiles:select", "id": profile_id})
     if result.get("error"):
         print(f"Error: {result['error']}", file=sys.stderr)
@@ -119,7 +119,7 @@ async def select_profile(profile_id: str):
     print(f"Selected: {profile_id[:8]}")
 
 
-async def delete_profile(profile_id: str):
+async def delete_profile(profile_id: str) -> None:
     result = await send_and_receive({"tp": "req:profiles:delete", "id": profile_id})
     if result.get("error"):
         print(f"Error: {result['error']}", file=sys.stderr)
@@ -127,7 +127,7 @@ async def delete_profile(profile_id: str):
     print(f"Deleted: {profile_id[:8]}")
 
 
-async def push_profile(filepath: str):
+async def push_profile(filepath: str) -> None:
     """Save, favorite, and select a profile in one go."""
     saved = await save_profile(filepath)
     pid = saved.get("id", "")
@@ -137,7 +137,7 @@ async def push_profile(filepath: str):
         print(f"\n✅ Profile '{saved.get('label', '')}' deployed and ready to brew!")
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)

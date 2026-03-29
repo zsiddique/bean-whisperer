@@ -18,5 +18,4 @@ jobs:
         run: semgrep scan --config p/python --config p/security-audit --config p/secrets --error scripts/
 
       - name: Run Semgrep (custom OpenClaw skill checks)
-        run: |
-          semgrep scan --config .semgrep/ --error . || true
+        run: semgrep scan --config .semgrep/ --error scripts/
