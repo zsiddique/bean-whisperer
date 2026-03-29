@@ -18,6 +18,10 @@
 >
 > BeanWhisperer is an AI-powered espresso profile generator for [GaggiMate](https://gaggimate.eu/) Pro machines. It encodes [Lance Hedrick's](https://www.youtube.com/@LanceHedrick) espresso methodology into a tool that reasons about your coffee, generates optimized pressure profiles, and deploys them over WebSocket — all from a single conversation.
 
+<p align="center">
+  <img src="https://github.com/zsiddique/bean-whisperer/releases/download/v0.2.0/demo.gif" alt="BeanWhisperer demo" width="700">
+</p>
+
 ---
 
 ## How It Works
