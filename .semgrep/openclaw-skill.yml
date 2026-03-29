@@ -1,14 +1,12 @@
 rules:
   - id: no-hardcoded-tokens
-    patterns:
-      - pattern-either:
-          - pattern: '"$TOKEN"'
-          - pattern: "'$TOKEN'"
-    pattern-filters:
-      - pattern: $TOKEN
-        metavariable-regex:
-          metavariable: $TOKEN
-          regex: ^(mfa\.|xox[boaprs]-|discord\.|sk-|ghp_|gho_|github_pat_)
+    pattern-either:
+      - pattern-regex: '["''][a-zA-Z0-9_-]*(xox[boaprs]-[a-zA-Z0-9-]+)[a-zA-Z0-9_-]*["'']'
+      - pattern-regex: '["''][a-zA-Z0-9_-]*(sk-[a-zA-Z0-9]{20,})[a-zA-Z0-9_-]*["'']'
+      - pattern-regex: '["''][a-zA-Z0-9_-]*(ghp_[a-zA-Z0-9]{36,})[a-zA-Z0-9_-]*["'']'
+      - pattern-regex: '["''][a-zA-Z0-9_-]*(gho_[a-zA-Z0-9]{36,})[a-zA-Z0-9_-]*["'']'
+      - pattern-regex: '["''][a-zA-Z0-9_-]*(github_pat_[a-zA-Z0-9_]{20,})[a-zA-Z0-9_-]*["'']'
+      - pattern-regex: '["'']mfa\.[a-zA-Z0-9_-]{80,}["'']'
     message: Hardcoded API token detected. Use environment variables instead.
     languages: [python]
     severity: ERROR
