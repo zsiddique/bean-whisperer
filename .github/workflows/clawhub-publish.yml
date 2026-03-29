@@ -21,4 +21,4 @@ jobs:
       - name: Publish skill
         env:
           CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
-        run: clawhub publish .
+        run: clawhub publish . --token "$CLAWHUB_TOKEN"
