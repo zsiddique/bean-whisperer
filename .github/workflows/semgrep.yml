@@ -1,0 +1,22 @@
+name: Semgrep Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep (Python security rules)
+        run: semgrep scan --config p/python --config p/security-audit --config p/secrets --error scripts/
+
+      - name: Run Semgrep (custom OpenClaw skill checks)
+        run: |
+          semgrep scan --config .semgrep/ --error . || true

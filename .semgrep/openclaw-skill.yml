@@ -1,0 +1,64 @@
+rules:
+  - id: no-hardcoded-tokens
+    patterns:
+      - pattern-either:
+          - pattern: '"$TOKEN"'
+          - pattern: "'$TOKEN'"
+    pattern-filters:
+      - pattern: $TOKEN
+        metavariable-regex:
+          metavariable: $TOKEN
+          regex: ^(mfa\.|xox[boaprs]-|discord\.|sk-|ghp_|gho_|github_pat_)
+    message: Hardcoded API token detected. Use environment variables instead.
+    languages: [python]
+    severity: ERROR
+
+  - id: no-bare-except
+    pattern: |
+      except:
+          ...
+    message: >
+      Bare except clause catches SystemExit, KeyboardInterrupt, and MemoryError.
+      Use 'except Exception:' at minimum, or catch specific exceptions.
+    languages: [python]
+    severity: WARNING
+
+  - id: no-eval-or-exec
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+    message: eval/exec can run arbitrary code. Avoid in OpenClaw skills.
+    languages: [python]
+    severity: ERROR
+
+  - id: no-subprocess-shell
+    pattern: subprocess.call(..., shell=True, ...)
+    message: >
+      subprocess with shell=True is vulnerable to command injection.
+      Use a list of arguments instead.
+    languages: [python]
+    severity: ERROR
+
+  - id: no-pickle-load
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+    message: pickle deserialization can run arbitrary code. Use json instead.
+    languages: [python]
+    severity: ERROR
+
+  - id: no-yaml-unsafe-load
+    pattern: yaml.load(..., Loader=yaml.FullLoader, ...)
+    fix: yaml.safe_load(...)
+    message: Use yaml.safe_load() to prevent arbitrary code execution.
+    languages: [python]
+    severity: ERROR
+
+  - id: path-traversal-in-filename
+    pattern: |
+      $PATH / $DICT["filename"]
+    message: >
+      Untrusted filename used directly in path construction.
+      Use Path(filename).name to strip directory components.
+    languages: [python]
+    severity: WARNING
