@@ -22,10 +22,11 @@ jobs:
         env:
           CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
         run: |
-          mkdir -p "$HOME/Library/Application Support/clawhub" 2>/dev/null || mkdir -p "$HOME/.config/clawhub"
+          # clawhub CLI reads from ~/Library/Application Support/clawhub/config.json on macOS
+          # and ~/.config/clawhub/config.json on Linux (XDG)
           CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/clawhub"
           mkdir -p "$CONFIG_DIR"
-          echo "{\"token\":\"$CLAWHUB_TOKEN\"}" > "$CONFIG_DIR/config.json"
+          echo "{\"registry\":\"https://clawhub.ai\",\"token\":\"$CLAWHUB_TOKEN\"}" > "$CONFIG_DIR/config.json"
 
       - name: Publish skill
         run: clawhub publish .
