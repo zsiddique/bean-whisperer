@@ -1,5 +1,10 @@
 # BeanWhisperer ☕
 
+[![CI](https://github.com/zsiddique/bean-whisperer/actions/workflows/ci.yml/badge.svg)](https://github.com/zsiddique/bean-whisperer/actions/workflows/ci.yml)
+[![Semgrep](https://img.shields.io/badge/security-semgrep-blue)](https://github.com/zsiddique/bean-whisperer/actions/workflows/semgrep.yml)
+[![SKILL.md](https://github.com/zsiddique/bean-whisperer/actions/workflows/validate-skill.yml/badge.svg)](https://github.com/zsiddique/bean-whisperer/actions/workflows/validate-skill.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Generate, manage, and deploy espresso brew profiles for [GaggiMate](https://gaggimate.eu/) Pro machines. Built around Lance Hedrick's espresso methodology with support for community profile discovery via the GaggiMate Discord.
 
 ## What This Does
