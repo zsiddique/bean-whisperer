@@ -29,4 +29,6 @@ jobs:
           echo "{\"registry\":\"https://clawhub.ai\",\"token\":\"$CLAWHUB_TOKEN\"}" > "$CONFIG_DIR/config.json"
 
       - name: Publish skill
-        run: clawhub publish .
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+        run: clawhub publish . --version "${VERSION#v}"
