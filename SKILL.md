@@ -35,16 +35,33 @@ Read `references/lance-hedrick-methodology.md` for the full framework. Key princ
 **Photo**: Extract bean name, roaster, origin, roast level, processing method, tasting notes.
 **Name**: Search web for origin, roast, process, flavor notes.
 
-### 2. Gather Parameters (ask if not provided)
+### 2. Search Discord Community
+Always check the community first. A battle-tested profile tweaked for this bean is the best starting point.
+
+```bash
+python3 scripts/discord-profiles.py recommend <roast> [<origin>]
+python3 scripts/discord-profiles.py search "<strategy or keyword>"
+```
+
+Download the best candidate and evaluate it against the bean's characteristics. Then decide:
+
+- **Good fit**: Tweak the community profile — adjust temp, ratio, dose, or stop conditions to match this specific bean. Always tweak; never push a community profile unmodified (every bean is different).
+- **No good fit** (nothing relevant, or you're confident you can do better for this bean): Skip to step 3 and generate from scratch.
+
+### 3. Gather Parameters (ask if not provided)
 - **Basket size**: 18g or 20g (auto-recommend based on roast)
 - **Ratio**: Auto per Lance's rules (light=1:2.8, medium=1:2.2, dark=1:1.7)
 - **Style**: espresso, ristretto, lungo, milk drink, allongé
 - **Freshness**: fresh (<4wk), rested (4-8wk), aged (>8wk)
-- **Base profile**: Use existing machine profile or generate fresh
 
-### 3. Generate Profile (two modes)
+### 4. Generate or Tweak Profile
 
-**Static mode** (default — fast, deterministic, schema-compliant):
+**If tweaking a community profile** (from step 2):
+Modify the downloaded JSON directly — adjust `temperature`, `phases[].pump.pressure`, `phases[].pump.flow`, ratio (volumetric target values), or dose. Use the Lance Hedrick methodology to decide what to change for this specific bean. Save the modified profile to `/tmp/profile.json`.
+
+**If generating fresh** (no good Discord match):
+
+*Static mode* (default — fast, deterministic, schema-compliant):
 ```bash
 python3 scripts/generate-profile.py \
   --label "Bean Name" \
@@ -56,19 +73,19 @@ python3 scripts/generate-profile.py \
   --output /tmp/profile.json
 ```
 
-**LLM mode** (for edge cases, unusual beans, taste-based iteration):
+*LLM mode* (for edge cases, unusual beans, taste-based iteration):
 Read `references/barista-persona.md` and adopt the Lance Hedrick persona defined in the system prompt section. Reason about the bean as that persona, decide parameters, then pass to the static generator for valid JSON. Always explain the "why" behind every choice using the sour-sweet-bitter framework. For post-shot iteration, stay in persona and adjust based on taste feedback.
 
-### 4. Review with User
-Present: strategy, phases, temperature, dose/ratio, expected shot time, expected pressure. Explain WHY this strategy suits their bean using the sour-sweet-bitter framework. Be honest about trade-offs.
+### 5. Review with User
+Present: strategy, phases, temperature, dose/ratio, expected shot time, expected pressure. Explain WHY this strategy suits their bean using the sour-sweet-bitter framework. Be honest about trade-offs. If based on a community profile, credit the original author.
 
-### 5. Deploy to Machine
+### 6. Deploy to Machine
 ```bash
 python3 scripts/gaggimate-ws.py push /tmp/profile.json
 ```
 Saves + favorites + selects in one step. Requires `pip3 install websockets`.
 
-### 6. Post-Shot Iteration (LLM mode)
+### 7. Post-Shot Iteration (LLM mode)
 If user reports taste feedback ("it was sour", "bitter finish", "too thin"):
 - Sour → extend ratio 5g, DON'T go finer first
 - Bitter/dry → reduce ratio or recommend coarser grind
@@ -145,7 +162,9 @@ python3 scripts/discord-profiles.py download-all --limit 50
 4. User picks one → optionally modify (temp, ratio, stop conditions) for their specific bean
 5. Push modified profile to machine via `gaggimate-ws.py push`
 
-### When to Use Discord vs Generate Fresh
-- **Discord first**: When the bean type is common (dark Italian, lever-style, standard medium)
-- **Generate fresh**: When the bean is unusual (rare variety, unique processing, specific ratio needs)
-- **Hybrid**: Download a community profile as base → modify temp/ratio/targets for the specific bean
+### When to Generate Fresh Instead of Tweaking Discord
+Discord search (step 2) is always the first action. Only generate from scratch when:
+- No community profiles match the bean type
+- The bean is unusual enough that a community profile would need so many changes it's easier to start fresh
+- You're confident the generator will produce a better result for this specific bean
+- The user explicitly asks for a custom profile

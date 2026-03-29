@@ -118,29 +118,37 @@ async def fetch_forum_threads(session: aiohttp.ClientSession, limit: int = 100) 
 
 
 async def fetch_thread_attachments(session: aiohttp.ClientSession, thread_id: str) -> list[dict]:
-    """Get JSON attachments from a forum thread (OP + first few messages)."""
+    """Get JSON attachments from a forum thread, paginating through all messages."""
     attachments = []
+    seen_ids: set[str] = set()
+
+    def _collect(msg: dict) -> None:
+        for a in msg.get("attachments", []):
+            if a["filename"].endswith(".json") and a.get("size", 0) < 100000 and a["id"] not in seen_ids:
+                seen_ids.add(a["id"])
+                attachments.append(a)
 
     # Try OP message (thread_id == first message_id in forums)
     try:
         msg = await api_get(session, f"/channels/{thread_id}/messages/{thread_id}")
-        for a in msg.get("attachments", []):
-            if a["filename"].endswith(".json") and a.get("size", 0) < 100000:
-                attachments.append(a)
+        _collect(msg)
     except Exception:
         pass
 
-    # Also check first few messages in thread
-    msgs = await api_get(session, f"/channels/{thread_id}/messages?limit=10")
-    if isinstance(msgs, list):
+    # Paginate through all messages (100 per page, backwards using before=)
+    before = None
+    while True:
+        path = f"/channels/{thread_id}/messages?limit=100"
+        if before:
+            path += f"&before={before}"
+        msgs = await api_get(session, path)
+        if not isinstance(msgs, list) or not msgs:
+            break
         for msg in msgs:
-            for a in msg.get("attachments", []):
-                if (
-                    a["filename"].endswith(".json")
-                    and a.get("size", 0) < 100000
-                    and not any(ea["id"] == a["id"] for ea in attachments)
-                ):
-                    attachments.append(a)
+            _collect(msg)
+        if len(msgs) < 100:
+            break
+        before = msgs[-1]["id"]
 
     return attachments
 
