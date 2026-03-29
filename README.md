@@ -1,156 +1,96 @@
-# BeanWhisperer ☕
+<p align="center">
+  <h1 align="center">BeanWhisperer</h1>
+  <p align="center">
+    <em>Your AI barista that speaks fluent GaggiMate.</em>
+  </p>
+  <p align="center">
+    <a href="https://github.com/zsiddique/bean-whisperer/actions/workflows/ci.yml"><img src="https://github.com/zsiddique/bean-whisperer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/zsiddique/bean-whisperer/actions/workflows/semgrep.yml"><img src="https://img.shields.io/badge/security-semgrep-blue" alt="Semgrep"></a>
+    <a href="https://github.com/zsiddique/bean-whisperer/actions/workflows/validate-skill.yml"><img src="https://github.com/zsiddique/bean-whisperer/actions/workflows/validate-skill.yml/badge.svg" alt="SKILL.md"></a>
+    <a href="https://clawhub.ai/zsiddique/bean-whisperer"><img src="https://img.shields.io/badge/ClawHub-bean--whisperer-orange" alt="ClawHub"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"></a>
+  </p>
+</p>
 
-[![CI](https://github.com/zsiddique/bean-whisperer/actions/workflows/ci.yml/badge.svg)](https://github.com/zsiddique/bean-whisperer/actions/workflows/ci.yml)
-[![Semgrep](https://img.shields.io/badge/security-semgrep-blue)](https://github.com/zsiddique/bean-whisperer/actions/workflows/semgrep.yml)
-[![SKILL.md](https://github.com/zsiddique/bean-whisperer/actions/workflows/validate-skill.yml/badge.svg)](https://github.com/zsiddique/bean-whisperer/actions/workflows/validate-skill.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+---
 
-Generate, manage, and deploy espresso brew profiles for [GaggiMate](https://gaggimate.eu/) Pro machines. Built around Lance Hedrick's espresso methodology with support for community profile discovery via the GaggiMate Discord.
+> **Snap a photo of your beans. Get a dialed-in pressure profile. Push it to your machine. Sip.**
+>
+> BeanWhisperer is an AI-powered espresso profile generator for [GaggiMate](https://gaggimate.eu/) Pro machines. It encodes [Lance Hedrick's](https://www.youtube.com/@LanceHedrick) espresso methodology into a tool that reasons about your coffee, generates optimized pressure profiles, and deploys them over WebSocket — all from a single conversation.
 
-## What This Does
+---
 
-1. **Identify a coffee bean** — from a photo of the bag or by name
-2. **Auto-generate an optimized GaggiMate Pro profile** — temperature, pressure strategy, ratio, and dose selected based on roast level, origin, processing method, and freshness
-3. **Browse community profiles** from the GaggiMate Discord `#profiles` channel
-4. **Push profiles directly to your machine** via WebSocket — saved, favorited, and selected in one command
+## How It Works
 
-## Setup
+```
+  Bean Photo / Name
+        |
+        v
+  [Identify Bean] -----> roast, origin, process, freshness
+        |
+        v
+  [Generate Profile] --> strategy, temp, ratio, dose, phases
+        |
+        v
+  [Push to Machine] ---> ws://gaggimate.local/ws
+        |
+        v
+  [Taste Feedback] ----> "too sour" / "bitter" / "thin"
+        |
+        v
+  [Adjust & Re-push] --> iterate until dialed in
+```
 
-### As an OpenClaw Skill (Recommended)
+## Quick Install
 
-If you use [OpenClaw](https://github.com/openclaw/openclaw), install as a workspace skill:
+### ClawHub (Recommended)
 
 ```bash
-# Clone into your workspace skills directory
+clawhub install bean-whisperer
+```
+
+### OpenClaw Workspace
+
+```bash
 cd ~/.openclaw/workspace/skills
 git clone git@github.com:zsiddique/bean-whisperer.git
 ```
 
-That's it. OpenClaw auto-discovers skills in `workspace/skills/` via the `SKILL.md` frontmatter. You can now talk to your agent naturally:
-
-- Send a **photo of a bean bag** → agent identifies it and generates a profile
-- Say **"new bean: Onyx Tropical Weather"** → agent researches it and creates a profile
-- Say **"find me a lever profile for dark roast"** → agent searches Discord community profiles
-- Say **"it was a bit sour"** → agent adjusts the profile and re-pushes
-
-The agent handles the full pipeline: identify → generate → explain → push to machine → iterate based on taste feedback.
-
-#### Environment Variables
-
-Store these in your shell profile or OpenClaw config:
-
-```bash
-# Optional: override default hostname (default: gaggimate.local)
-export GAGGIMATE_HOST=192.168.1.100
-
-# Required for Discord community profile browsing
-export DISCORD_TOKEN="your-discord-user-token"
-# Or store in: ~/.config/gaggimate/discord-token
-```
-
-#### DNS Setup
-
-If your GaggiMate isn't reachable at `gaggimate.local` (e.g., mDNS doesn't work from your server), add a DNS entry or use the IP directly via `GAGGIMATE_HOST`.
-
-### Standalone (No OpenClaw)
-
-Install dependencies:
+### Standalone
 
 ```bash
 pip install websockets aiohttp
 ```
 
-### Generate a Profile
+## Talk to It
 
-```bash
-python3 scripts/generate-profile.py \
-  --label "Ethiopian Yirgacheffe" \
-  --roast light \
-  --origin ethiopia \
-  --process washed \
-  --output my-profile.json
-```
+Once installed as an OpenClaw or ClawHub skill, just talk naturally:
 
-The generator auto-selects strategy, temperature, ratio, and dose based on the bean characteristics. You can override any parameter:
+| You say | BeanWhisperer does |
+|---------|-------------------|
+| *Send a photo of a bean bag* | Identifies the bean, generates a profile, explains why |
+| "New bean: Onyx Tropical Weather" | Researches it, picks strategy, creates profile |
+| "Find me a lever profile for dark roast" | Searches Discord community profiles |
+| "Push it to my machine" | Deploys via WebSocket in one command |
+| "It was a bit sour" | Extends ratio (not finer!), re-pushes adjusted profile |
+| "Make it an allonge" | Switches to low-contact strategy, 1:3.5 ratio |
 
-```bash
-python3 scripts/generate-profile.py \
-  --label "My Custom Profile" \
-  --roast medium \
-  --origin colombia \
-  --process natural \
-  --dose 18 \
-  --ratio 2.2 \
-  --temp 91 \
-  --strategy lever \
-  --style espresso \
-  --freshness fresh \
-  --output custom.json
-```
-
-### Push to Your Machine
-
-```bash
-# Push (save + favorite + select) in one step
-python3 scripts/gaggimate-ws.py push my-profile.json
-
-# Or manage profiles individually
-python3 scripts/gaggimate-ws.py list
-python3 scripts/gaggimate-ws.py save my-profile.json
-python3 scripts/gaggimate-ws.py favorite <profile-id>
-python3 scripts/gaggimate-ws.py select <profile-id>
-python3 scripts/gaggimate-ws.py delete <profile-id>
-python3 scripts/gaggimate-ws.py get <profile-id>
-```
-
-By default connects to `gaggimate.local`. Override with:
-```bash
-export GAGGIMATE_HOST=192.168.1.100
-```
-
-### Browse Discord Community Profiles
-
-Search and download profiles shared by the GaggiMate community on Discord. This is exactly what Lance Hedrick does in [his GaggiMate video](https://www.youtube.com/watch?v=kUSZC_R3M8s) — he pulled "Sir Lancelot's Lever" from the Discord `#profiles` channel and imported it directly onto his Silvia.
-
-```bash
-# Set your Discord token (user token from browser DevTools)
-export DISCORD_TOKEN="your-token-here"
-
-# List recent community profiles
-python3 scripts/discord-profiles.py list
-
-# Search by name
-python3 scripts/discord-profiles.py search "lever"
-python3 scripts/discord-profiles.py search "allonge"
-
-# Get recommendations for your bean
-python3 scripts/discord-profiles.py recommend light
-python3 scripts/discord-profiles.py recommend dark
-python3 scripts/discord-profiles.py recommend medium-light kenya
-
-# Download a specific profile thread
-python3 scripts/discord-profiles.py download <thread-id>
-
-# Bulk download
-python3 scripts/discord-profiles.py download-all --limit 30
-```
+The agent adopts a Lance Hedrick-style barista persona — it explains *why* every parameter was chosen using the sour-sweet-bitter framework.
 
 ## Profile Strategies
 
-The generator includes 6 pressure profile strategies based on Lance Hedrick's methodology:
+Six pressure profile strategies, auto-selected based on your bean:
 
-| Strategy | Best For | Peak Pressure | Shot Time | Description |
-|----------|----------|---------------|-----------|-------------|
-| **bloom** | Light washed, African origins | 6-7 bar | 25-30s | Fill → bloom (no pump) → gentle ramp → brew |
-| **turbo** | Ultra light, processed, aged beans | 2-6 bar | 15-20s | Coarse grind, high flow, fast extraction |
-| **lever** | Medium roasts, balanced beans | 8-9 bar declining | 30-40s | Mimics spring lever machines (Cremina-style) |
-| **declining** | Medium-dark and dark roasts | 9→5.5 bar | 25-35s | Traditional with controlled pressure decline |
-| **flat** | Any (safe starting point) | 9 bar sustained | 25-35s | Classic flat 9 bar |
-| **low-contact** | Ultra light geisha-type | 1-3 bar | 15-20s | Very fast flow, minimal contact, "espresso adjacent" |
+| Strategy | Best For | Pressure | Time |
+|----------|----------|----------|------|
+| **bloom** | Light washed, African | 6-7 bar | 25-30s |
+| **turbo** | Ultra light, processed, aged | 2-6 bar | 15-20s |
+| **lever** | Medium, balanced | 8-9 bar declining | 30-40s |
+| **declining** | Medium-dark, dark | 9 to 5.5 bar | 25-35s |
+| **flat** | Any (safe starting point) | 9 bar sustained | 25-35s |
+| **low-contact** | Ultra light geisha | 1-3 bar | 15-20s |
 
-### Auto-Selection Logic
-
-When `--strategy auto` (default), the generator picks based on:
+### Auto-Selection
 
 | Roast | Process | Strategy |
 |-------|---------|----------|
@@ -163,155 +103,117 @@ When `--strategy auto` (default), the generator picks based on:
 | Any | Anaerobic / Co-ferment | turbo |
 | Any (aged >8 weeks) | Any | turbo |
 
-## Parameters Reference
+## Lance Hedrick's Methodology
 
-### `generate-profile.py`
+> *"Pressure is a red herring."*
+
+1. **Pressure is a red herring** — balance > 9 bar. World-class espresso at 2-4 bar.
+2. **Ratio is #1** — extend ratio before going finer.
+3. **Coarser is default** — more even flow, less channeling.
+4. **Temperature: lower than you think** — default 90C, rarely above 93-94.
+5. **Processed coffees need gentleness** — low temp, coarser, moderate ratio.
+6. **Aged coffee: accept low pressure** — don't go finer to compensate.
+7. **Crema does not equal quality** — a balanced thin shot beats a thick channeled mess.
+
+See [`references/lance-hedrick-methodology.md`](references/lance-hedrick-methodology.md) for the full framework.
+
+## CLI Usage
+
+### Generate a Profile
+
+```bash
+python3 scripts/generate-profile.py \
+  --label "Ethiopian Yirgacheffe" \
+  --roast light --origin ethiopia --process washed \
+  --output my-profile.json
+```
+
+All parameters auto-select based on the bean. Override any of them:
+
+```bash
+python3 scripts/generate-profile.py \
+  --label "My Custom Profile" \
+  --roast medium --origin colombia --process natural \
+  --dose 18 --ratio 2.2 --temp 91 --strategy lever \
+  --style espresso --freshness fresh --output custom.json
+```
+
+### Push to Machine
+
+```bash
+python3 scripts/gaggimate-ws.py push my-profile.json    # save + favorite + select
+python3 scripts/gaggimate-ws.py list                     # show all profiles
+python3 scripts/gaggimate-ws.py get <id>                 # export profile JSON
+python3 scripts/gaggimate-ws.py delete <id>              # remove a profile
+```
+
+### Browse Discord Community Profiles
+
+```bash
+python3 scripts/discord-profiles.py list                 # recent profiles
+python3 scripts/discord-profiles.py search "lever"       # search by name
+python3 scripts/discord-profiles.py recommend light kenya # AI recommendations
+python3 scripts/discord-profiles.py download <thread-id>  # download profile
+```
+
+## Environment Variables
+
+```bash
+# Override GaggiMate hostname (default: gaggimate.local)
+export GAGGIMATE_HOST=192.168.1.100
+
+# Discord community profiles (store in ~/.config/gaggimate/discord-token)
+export DISCORD_TOKEN="your-token"
+```
+
+## Parameters Reference
 
 | Parameter | Values | Default | Notes |
 |-----------|--------|---------|-------|
-| `--label` | string | *(required)* | Profile name shown on machine |
+| `--label` | string | *(required)* | Profile name on machine |
 | `--roast` | light, medium-light, medium, medium-dark, dark | *(required)* | Drives strategy/temp/ratio |
 | `--origin` | ethiopia, colombia, brazil, kenya, sumatra, guatemala, costarica, blend, other | other | Affects strategy for certain roasts |
-| `--process` | washed, natural, honey, anaerobic, co-ferment, unknown | washed | Anaerobic/co-ferment → gentle extraction |
-| `--dose` | 17-20 | auto | 20g for light, 18g for darker |
-| `--ratio` | 1.5-3.5 | auto | Based on Lance's ratio rules |
-| `--temp` | 85-96 | auto | Based on roast + process |
+| `--process` | washed, natural, honey, anaerobic, co-ferment, unknown | washed | Anaerobic/co-ferment = gentle |
+| `--dose` | 17-20 | auto | 20g light, 18g darker |
+| `--ratio` | 1.5-3.5 | auto | Lance's ratio rules |
+| `--temp` | 85-96 | auto | Roast + process based |
 | `--strategy` | auto, bloom, turbo, lever, declining, flat, low-contact | auto | Override auto-selection |
 | `--style` | espresso, ristretto, lungo, milk, allonge | espresso | Adjusts ratio target |
-| `--freshness` | fresh, rested, aged | fresh | Aged beans → turbo strategy |
-| `--output` | file path | stdout | Where to write JSON |
-
-### Temperature Defaults (Auto)
-
-| Roast | Temp | Lance's Reasoning |
-|-------|------|-------------------|
-| Light | 92°C | High enough for sweetness, not so hot it's bitter |
-| Medium-light | 91°C | Sweet spot |
-| Medium | 90°C | Baseline default |
-| Medium-dark | 88°C | Sub-90 for darker roasts |
-| Dark | 86°C | Well sub-90 to avoid harshness |
-| Anaerobic/Co-ferment | 86-88°C | Low to preserve process flavors |
-| Aged | 88°C | Lower temp for depleted CO2 |
-
-### Ratio Defaults (Auto)
-
-| Roast | Ratio | Lance's Reasoning |
-|-------|-------|-------------------|
-| Light | 1:2.8 | Need more water to push past initial acids |
-| Medium-light | 1:2.5 | Balanced extraction |
-| Medium | 1:2.2 | Classic range |
-| Medium-dark | 1:1.8 | Soluble enough, don't over-extract |
-| Dark | 1:1.7 | Very soluble, keep it short |
-
-## Methodology
-
-This tool encodes Lance Hedrick's espresso approach (distilled from [his videos](https://www.youtube.com/@LanceHedrick)):
-
-1. **Pressure is a red herring** — balance matters more than hitting 9 bar. World-class espresso is pulled at 2-4 bar.
-2. **Ratio is the #1 extraction lever** — extend ratio before going finer.
-3. **Coarser is the default direction** — more even flow through the puck, less channeling.
-4. **Temperature: lower than you think** — default 90°C, rarely above 93-94.
-5. **Heavily processed coffees need gentleness** — low temp, coarser, moderate ratio.
-6. **Aged coffee: accept low pressure** — don't go finer to compensate for lost CO2.
-7. **Crema ≠ quality** — a balanced thin shot beats a thick channeled mess.
-
-See [`references/lance-hedrick-methodology.md`](references/lance-hedrick-methodology.md) for the complete framework including his dialing-in decision tree.
+| `--freshness` | fresh, rested, aged | fresh | Aged = turbo strategy |
 
 ## Machine Compatibility
 
-Built and tested on **Rancilio Silvia with GaggiMate Pro**, but the profiles are standard GaggiMate JSON and work on any GaggiMate-equipped machine:
+Built for **Rancilio Silvia + GaggiMate Pro**, works on any GaggiMate machine:
 
 - Gaggia Classic / Classic Pro / Evo
 - Rancilio Silvia (all versions)
 - Any machine with GaggiMate Pro (pressure transducer + flow profiling)
-- GaggiMate Standard (basic profiles only — `type: "standard"`)
-
-### Rancilio Silvia Notes
-
-- Boiler wall temp reads 10-14°C higher than actual puck temperature
-- GaggiMate applies a configurable offset (default 5°C for Silvia)
-- Profile temperatures = **desired brew water temperature** (offset handled automatically)
-- Vibratory pump ~4.5 ml/s flow rate — pressure drops faster than commercial machines
-- Thick brass boiler — slow temp changes, no cold water inlet
-- Boiler refill plugin recommended (heating element in water)
-
-## Profile JSON Format
-
-Profiles follow the [GaggiMate schema](references/profile-schema.json). A Pro profile looks like:
-
-```json
-{
-  "id": "uuid-here",
-  "label": "My Coffee",
-  "type": "pro",
-  "description": "Light roast, bloom profile",
-  "temperature": 92,
-  "phases": [
-    {
-      "name": "Fill",
-      "phase": "preinfusion",
-      "valve": 1,
-      "duration": 4,
-      "temperature": 0,
-      "pump": {"target": "flow", "pressure": 2, "flow": 4},
-      "transition": {"type": "instant", "duration": 0, "adaptive": 1}
-    },
-    {
-      "name": "Brew",
-      "phase": "brew",
-      "valve": 1,
-      "duration": 35,
-      "temperature": 0,
-      "pump": {"target": "pressure", "pressure": 7, "flow": 4},
-      "transition": {"type": "ease-in", "duration": 4, "adaptive": 1},
-      "targets": [
-        {"type": "volumetric", "operator": "gte", "value": 56.0}
-      ]
-    }
-  ]
-}
-```
-
-### Key Fields
-
-- **pump.target**: `"pressure"` or `"flow"` — what the PID controls
-- **pump.pressure / pump.flow**: Target values. `-1` = maintain current value at phase start
-- **transition.type**: `instant`, `linear`, `ease-in`, `ease-out`, `ease-in-out`
-- **transition.adaptive**: `1` = start from current actual value (not previous target)
-- **targets**: Stop conditions — `volumetric` (scale weight), `pressure`, `flow`, `pumped` (ml in phase)
-
-## LLM Integration
-
-The `references/barista-persona.md` file contains a system prompt that turns any LLM into a Lance Hedrick-style espresso consultant. Use it for:
-
-- Reasoning about unusual beans or edge cases
-- Explaining *why* a specific profile suits a bean
-- Iterating based on taste feedback ("it was sour", "bitter finish")
-- Photo identification of bean bags
-
-The recommended flow is: **LLM identifies bean → LLM decides parameters → `generate-profile.py` creates valid JSON → push to machine**.
+- GaggiMate Standard (basic `"type": "standard"` profiles)
 
 ## Examples
 
-See the [`examples/`](examples/) directory for pre-generated profiles:
+Pre-generated profiles in [`examples/`](examples/):
 
-- `light-washed-bloom.json` — Light Ethiopian, bloom strategy
-- `medium-lever.json` — Medium Colombian, lever strategy
-- `dark-declining.json` — Dark Italian blend, declining strategy
-- `anaerobic-turbo.json` — Anaerobic natural, turbo strategy
-- `geisha-allonge.json` — Light Geisha, allongé style
+| File | Bean | Strategy |
+|------|------|----------|
+| `light-washed-bloom.json` | Light Ethiopian | bloom |
+| `medium-lever.json` | Medium Colombian | lever |
+| `dark-declining.json` | Dark Italian blend | declining |
+| `anaerobic-turbo.json` | Anaerobic natural | turbo |
+| `geisha-allonge.json` | Light Geisha | low-contact |
+| `sir-lancelots-lever.json` | Community (Lance's) | lever |
 
 ## Community
 
-- [GaggiMate Discord](https://discord.gg/APw7rgPGPf) — `#profiles` channel for shared profiles
-- [GaggiMate Docs](https://docs.gaggimate.eu/docs/profiles/) — Official profile documentation
-- [GaggiMate Repo](https://github.com/jniebuhr/gaggimate) — Firmware source code
+- [GaggiMate Discord](https://discord.gg/APw7rgPGPf) — `#profiles` channel
+- [GaggiMate Docs](https://docs.gaggimate.eu/docs/profiles/) — Official profile docs
+- [GaggiMate Firmware](https://github.com/jniebuhr/gaggimate) — Source code
 
 ## Credits
 
-- **GaggiMate** by [Jokim Niebuhr](https://github.com/jniebuhr) — the firmware and hardware making this possible
-- **Lance Hedrick** — espresso methodology and philosophy ([YouTube](https://www.youtube.com/@LanceHedrick))
-- Profile strategies informed by the GaggiMate Discord community
+- **[GaggiMate](https://gaggimate.eu/)** by Jokim Niebuhr — the firmware making this possible
+- **[Lance Hedrick](https://www.youtube.com/@LanceHedrick)** — espresso methodology and philosophy
+- **GaggiMate Discord community** — profile strategies and testing
 
 ## License
 
