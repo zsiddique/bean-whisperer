@@ -17,11 +17,12 @@ Each profile is a forum thread; JSON attachments are in thread messages.
 """
 
 import asyncio
-import aiohttp
 import json
 import os
 import sys
 from pathlib import Path
+
+import aiohttp
 
 TOKEN_FILE = Path.home() / ".config" / "gaggimate" / "discord-token"
 CHANNEL_ID = "1380352847387820082"
@@ -35,7 +36,9 @@ def get_token() -> str:
     if not token and TOKEN_FILE.exists():
         token = TOKEN_FILE.read_text().strip()
     if not token:
-        print("ERROR: No Discord token. Set DISCORD_TOKEN or store in ~/.gaggimate-discord-token", file=sys.stderr)
+        print(
+            "ERROR: No Discord token. Set DISCORD_TOKEN or store in ~/.config/gaggimate/discord-token", file=sys.stderr
+        )
         sys.exit(1)
     return token
 
@@ -72,7 +75,7 @@ async def api_get(session: aiohttp.ClientSession, path: str) -> dict | list:
         return await resp.json()
 
 
-async def fetch_forum_threads(session: aiohttp.ClientSession, limit: int = 100) -> list:
+async def fetch_forum_threads(session: aiohttp.ClientSession, limit: int = 100) -> list[dict]:
     """Fetch archived threads from the #profiles forum channel."""
     all_threads = []
 
@@ -114,7 +117,7 @@ async def fetch_forum_threads(session: aiohttp.ClientSession, limit: int = 100) 
     return all_threads[:limit]
 
 
-async def fetch_thread_attachments(session: aiohttp.ClientSession, thread_id: str) -> list:
+async def fetch_thread_attachments(session: aiohttp.ClientSession, thread_id: str) -> list[dict]:
     """Get JSON attachments from a forum thread (OP + first few messages)."""
     attachments = []
 
@@ -124,7 +127,7 @@ async def fetch_thread_attachments(session: aiohttp.ClientSession, thread_id: st
         for a in msg.get("attachments", []):
             if a["filename"].endswith(".json") and a.get("size", 0) < 100000:
                 attachments.append(a)
-    except:
+    except Exception:
         pass
 
     # Also check first few messages in thread
@@ -132,23 +135,24 @@ async def fetch_thread_attachments(session: aiohttp.ClientSession, thread_id: st
     if isinstance(msgs, list):
         for msg in msgs:
             for a in msg.get("attachments", []):
-                if a["filename"].endswith(".json") and a.get("size", 0) < 100000:
-                    # Deduplicate by URL
-                    if not any(ea["id"] == a["id"] for ea in attachments):
-                        attachments.append(a)
+                if (
+                    a["filename"].endswith(".json")
+                    and a.get("size", 0) < 100000
+                    and not any(ea["id"] == a["id"] for ea in attachments)
+                ):
+                    attachments.append(a)
 
     return attachments
 
 
 async def download_attachment(url: str) -> dict | None:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                return None
-            try:
-                return json.loads(await resp.text())
-            except:
-                return None
+    async with aiohttp.ClientSession() as session, session.get(url) as resp:
+        if resp.status != 200:
+            return None
+        try:
+            return json.loads(await resp.text())
+        except Exception:
+            return None
 
 
 def summarize_profile(p: dict) -> str:
@@ -164,7 +168,8 @@ def summarize_profile(p: dict) -> str:
 # Commands
 # ============================================================
 
-async def cmd_list(limit: int = 50):
+
+async def cmd_list(limit: int = 50) -> None:
     async with aiohttp.ClientSession() as session:
         threads = await fetch_forum_threads(session, limit)
 
@@ -177,7 +182,7 @@ async def cmd_list(limit: int = 50):
     print(f"\n{min(len(threads), limit)} thread(s)")
 
 
-async def cmd_search(query: str, limit: int = 20):
+async def cmd_search(query: str, limit: int = 20) -> None:
     query_lower = query.lower()
     async with aiohttp.ClientSession() as session:
         threads = await fetch_forum_threads(session, 200)
@@ -196,7 +201,7 @@ async def cmd_search(query: str, limit: int = 20):
     print(f"\n{len(matches)} match(es) for '{query}'")
 
 
-async def cmd_download(thread_id: str):
+async def cmd_download(thread_id: str) -> None:
     PROFILES_DIR.mkdir(parents=True, exist_ok=True)
 
     async with aiohttp.ClientSession() as session:
@@ -216,7 +221,7 @@ async def cmd_download(thread_id: str):
             print(f"     → {outpath}")
 
 
-async def cmd_download_all(limit: int = 50):
+async def cmd_download_all(limit: int = 50) -> None:
     PROFILES_DIR.mkdir(parents=True, exist_ok=True)
 
     async with aiohttp.ClientSession() as session:
@@ -239,7 +244,7 @@ async def cmd_download_all(limit: int = 50):
                     with open(outpath, "w") as f:
                         json.dump(profile, f, indent=2)
                     label = profile.get("label", "unnamed")
-                    print(f"  ✅ {fname}: \"{label}\"")
+                    print(f'  ✅ {fname}: "{label}"')
                     count += 1
             # Rate limit protection
             await asyncio.sleep(0.5)
@@ -247,9 +252,20 @@ async def cmd_download_all(limit: int = 50):
     print(f"\n{count} profile(s) downloaded to {PROFILES_DIR}")
 
 
-async def cmd_recommend(roast: str, origin: str = ""):
+async def cmd_recommend(roast: str, origin: str = "") -> None:
     roast_keywords = {
-        "light": ["light", "nordic", "turbo", "bloom", "low contact", "geisha", "filter", "allonge", "allongé", "bright"],
+        "light": [
+            "light",
+            "nordic",
+            "turbo",
+            "bloom",
+            "low contact",
+            "geisha",
+            "filter",
+            "allonge",
+            "allongé",
+            "bright",
+        ],
         "medium-light": ["medium", "lever", "bloom", "specialty", "balanced", "adaptive"],
         "medium": ["medium", "lever", "classic", "balanced", "contact", "18g"],
         "medium-dark": ["dark", "traditional", "italian", "declining", "9 bar", "nine bar", "londonium"],

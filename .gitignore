@@ -4,3 +4,5 @@ __pycache__/
 *.token
 /tmp/
 /dist/
+.ruff_cache/
+*.egg-info/

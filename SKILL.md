@@ -1,9 +1,14 @@
 ---
-name: gaggimate-brew
-description: Generate espresso brew profiles for GaggiMate Pro on Rancilio Silvia. Use when the user provides a coffee bean (photo or name) and wants a brewing profile created, uploaded, or managed on their GaggiMate machine. Triggers on phrases like "new bean", "brew profile", "coffee profile", "espresso profile", "gaggimate", "dial in", "new coffee". Also handles listing, deleting, or modifying existing profiles on the machine.
+name: bean-whisperer
+description: Generate espresso brew profiles for GaggiMate Pro on Rancilio Silvia. Use when the user provides a coffee bean (photo or name) and wants a brewing profile created, uploaded, or managed on their GaggiMate machine. Triggers on phrases like "new bean", "brew profile", "coffee profile", "espresso profile", "gaggimate", "dial in", "new coffee", "shot was sour", "shot was bitter", "too acidic", "too thin", "taste feedback", "dial it in". Also handles listing, deleting, or modifying existing profiles on the machine.
+metadata:
+  openclaw:
+    emoji: "☕"
+    requires:
+      bins: ["python3"]
 ---
 
-# GaggiMate Brew Profile Generator
+# BeanWhisperer — Espresso Profile Generator
 
 Generate and deploy espresso profiles for GaggiMate Pro on a Rancilio Silvia. Based on Lance Hedrick's espresso methodology.
 
@@ -93,6 +98,13 @@ python3 scripts/gaggimate-ws.py save profile.json  # Upload without selecting
 python3 scripts/gaggimate-ws.py delete <id>        # Remove a profile
 python3 scripts/gaggimate-ws.py push profile.json  # Save + favorite + select
 ```
+
+## Edge Cases
+
+- **Machine offline**: If `gaggimate-ws.py` fails with a connection error, tell the user to check that GaggiMate is powered on and reachable at the configured host. Suggest saving the profile JSON locally and pushing later.
+- **Invalid/unclear bean photo**: If the photo is unreadable or not clearly a coffee bag, ask the user to provide bean details manually (roast, origin, process).
+- **No Bluetooth scale connected**: Volumetric stop conditions (`targets.type: "volumetric"`) require a scale. If the user has no scale, switch to time-based stops by removing volumetric targets and relying on phase `duration` values instead.
+- **GaggiMate Standard (not Pro)**: If the user has GaggiMate Standard (no pressure transducer), generate `"type": "standard"` profiles with only temperature and time — no pressure/flow phases.
 
 ## References
 - **Lance Hedrick methodology**: `references/lance-hedrick-methodology.md` — full framework with temp/ratio/pressure rules

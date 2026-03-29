@@ -16,9 +16,9 @@ Environment:
 
 import asyncio
 import json
+import os
 import sys
 import uuid
-import os
 
 try:
     import websockets
@@ -37,20 +37,28 @@ async def send_and_receive(msg: dict) -> dict:
     rid = str(uuid.uuid4())[:8]
     msg["rid"] = rid
 
-    async with websockets.connect(WS_URL) as ws:
-        await ws.send(json.dumps(msg))
-        while True:
-            try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=TIMEOUT)
-                data = json.loads(raw)
-                # Match on rid or on response type
-                if data.get("rid") == rid:
-                    return data
-                # Skip status events
-                if data.get("tp", "").startswith("evt:"):
-                    continue
-            except asyncio.TimeoutError:
-                return {"error": f"Timeout waiting for response to {msg['tp']}"}
+    try:
+        async with websockets.connect(WS_URL) as ws:
+            await ws.send(json.dumps(msg))
+            while True:
+                try:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=TIMEOUT)
+                    data = json.loads(raw)
+                    # Match on rid or on response type
+                    if data.get("rid") == rid:
+                        return data
+                    # Skip status events
+                    if data.get("tp", "").startswith("evt:"):
+                        continue
+                except TimeoutError:
+                    return {"error": f"Timeout waiting for response to {msg['tp']}"}
+    except OSError as e:
+        print(f"ERROR: Cannot reach GaggiMate at {HOST} ({e})", file=sys.stderr)
+        print("Check that the machine is powered on and reachable on your network.", file=sys.stderr)
+        sys.exit(1)
+    except websockets.exceptions.WebSocketException as e:
+        print(f"ERROR: WebSocket connection failed: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 async def list_profiles():
@@ -65,7 +73,9 @@ async def list_profiles():
     for p in profiles:
         fav = "★" if p.get("favorite") else " "
         sel = "→" if p.get("selected") else " "
-        print(f"  {fav}{sel} {p.get('id', '?')[:8]}  {p.get('label', 'unnamed'):30s}  {p.get('type', '?'):8s}  {p.get('temperature', '?')}°C  {len(p.get('phases', []))} phases")
+        print(
+            f"  {fav}{sel} {p.get('id', '?')[:8]}  {p.get('label', 'unnamed'):30s}  {p.get('type', '?'):8s}  {p.get('temperature', '?')}°C  {len(p.get('phases', []))} phases"
+        )
     print(f"\n{len(profiles)} profile(s) total")
 
 
@@ -85,7 +95,7 @@ async def save_profile(filepath: str) -> dict:
     if not profile.get("id"):
         profile["id"] = str(uuid.uuid4())
     result = await send_and_receive({"tp": "req:profiles:save", "profile": profile})
-    if "error" in result and result["error"]:
+    if result.get("error"):
         print(f"Error saving: {result['error']}", file=sys.stderr)
         sys.exit(1)
     saved = result.get("profile", profile)
@@ -95,7 +105,7 @@ async def save_profile(filepath: str) -> dict:
 
 async def favorite_profile(profile_id: str):
     result = await send_and_receive({"tp": "req:profiles:favorite", "id": profile_id})
-    if "error" in result and result["error"]:
+    if result.get("error"):
         print(f"Error: {result['error']}", file=sys.stderr)
         sys.exit(1)
     print(f"Favorited: {profile_id[:8]}")
@@ -103,7 +113,7 @@ async def favorite_profile(profile_id: str):
 
 async def select_profile(profile_id: str):
     result = await send_and_receive({"tp": "req:profiles:select", "id": profile_id})
-    if "error" in result and result["error"]:
+    if result.get("error"):
         print(f"Error: {result['error']}", file=sys.stderr)
         sys.exit(1)
     print(f"Selected: {profile_id[:8]}")
@@ -111,7 +121,7 @@ async def select_profile(profile_id: str):
 
 async def delete_profile(profile_id: str):
     result = await send_and_receive({"tp": "req:profiles:delete", "id": profile_id})
-    if "error" in result and result["error"]:
+    if result.get("error"):
         print(f"Error: {result['error']}", file=sys.stderr)
         sys.exit(1)
     print(f"Deleted: {profile_id[:8]}")

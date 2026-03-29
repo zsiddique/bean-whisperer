@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install ruff jsonschema
+
+      - name: Ruff lint
+        run: ruff check scripts/
+
+      - name: Ruff format check
+        run: ruff format --check scripts/
+
+  validate-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install jsonschema
+        run: pip install jsonschema
+
+      - name: Validate example profiles against schema
+        run: |
+          python3 -c "
+          import json, sys, glob
+          from jsonschema import validate, ValidationError
+
+          with open('references/profile-schema.json') as f:
+              schema = json.load(f)
+
+          errors = []
+          profiles = sorted(glob.glob('examples/*.json'))
+          if not profiles:
+              print('No example profiles found')
+              sys.exit(1)
+
+          for path in profiles:
+              try:
+                  with open(path) as f:
+                      profile = json.load(f)
+                  validate(instance=profile, schema=schema)
+                  print(f'  PASS: {path}')
+              except (ValidationError, json.JSONDecodeError) as e:
+                  print(f'  FAIL: {path} -- {e.message if hasattr(e, \"message\") else e}')
+                  errors.append(path)
+
+          if errors:
+              print(f'\n{len(errors)} profile(s) failed validation')
+              sys.exit(1)
+          else:
+              print(f'\nAll {len(profiles)} profile(s) valid')
+          "

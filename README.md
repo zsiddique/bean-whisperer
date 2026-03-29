@@ -1,4 +1,4 @@
-# GaggiMate Brew Profile Generator ☕
+# BeanWhisperer ☕
 
 Generate, manage, and deploy espresso brew profiles for [GaggiMate](https://gaggimate.eu/) Pro machines. Built around Lance Hedrick's espresso methodology with support for community profile discovery via the GaggiMate Discord.
 
@@ -18,7 +18,7 @@ If you use [OpenClaw](https://github.com/openclaw/openclaw), install as a worksp
 ```bash
 # Clone into your workspace skills directory
 cd ~/.openclaw/workspace/skills
-git clone git@github.com:zsiddique/gaggimate-brew.git
+git clone git@github.com:zsiddique/bean-whisperer.git
 ```
 
 That's it. OpenClaw auto-discovers skills in `workspace/skills/` via the `SKILL.md` frontmatter. You can now talk to your agent naturally:

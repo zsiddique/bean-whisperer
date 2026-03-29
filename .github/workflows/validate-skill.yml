@@ -1,0 +1,78 @@
+name: Validate SKILL.md
+
+on:
+  push:
+    branches: [main]
+    paths: [SKILL.md]
+  pull_request:
+    branches: [main]
+    paths: [SKILL.md]
+
+jobs:
+  validate-frontmatter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          python3 -c "
+          import sys
+          import yaml
+
+          with open('SKILL.md') as f:
+              content = f.read()
+
+          if not content.startswith('---'):
+              print('FAIL: SKILL.md must start with YAML frontmatter (---)')
+              sys.exit(1)
+
+          parts = content.split('---', 2)
+          if len(parts) < 3:
+              print('FAIL: SKILL.md frontmatter not properly closed with ---')
+              sys.exit(1)
+
+          try:
+              frontmatter = yaml.safe_load(parts[1])
+          except yaml.YAMLError as e:
+              print(f'FAIL: Invalid YAML in frontmatter: {e}')
+              sys.exit(1)
+
+          required_fields = ['name', 'description']
+          missing = [f for f in required_fields if f not in frontmatter]
+          if missing:
+              print(f'FAIL: Missing required fields: {missing}')
+              sys.exit(1)
+
+          if not isinstance(frontmatter['name'], str) or not frontmatter['name'].strip():
+              print('FAIL: name must be a non-empty string')
+              sys.exit(1)
+
+          if not isinstance(frontmatter['description'], str) or not frontmatter['description'].strip():
+              print('FAIL: description must be a non-empty string')
+              sys.exit(1)
+
+          metadata = frontmatter.get('metadata', {})
+          if 'openclaw' in metadata:
+              oc = metadata['openclaw']
+              if 'emoji' in oc and not isinstance(oc['emoji'], str):
+                  print('FAIL: metadata.openclaw.emoji must be a string')
+                  sys.exit(1)
+              if 'requires' in oc:
+                  requires = oc['requires']
+                  if 'bins' in requires and not isinstance(requires['bins'], list):
+                      print('FAIL: metadata.openclaw.requires.bins must be a list')
+                      sys.exit(1)
+
+          print('PASS: SKILL.md frontmatter is valid')
+          print(f'  name: {frontmatter[\"name\"]}')
+          print(f'  description: {frontmatter[\"description\"][:80]}...')
+          "

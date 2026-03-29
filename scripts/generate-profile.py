@@ -33,10 +33,10 @@ import json
 import sys
 import uuid
 
-
 # ============================================================
 # Lance Hedrick's methodology encoded as selection logic
 # ============================================================
+
 
 def auto_select_strategy(roast: str, process: str, origin: str, freshness: str) -> str:
     """Pick strategy per Lance Hedrick's approach."""
@@ -84,11 +84,11 @@ def auto_select_temp(roast: str, process: str, freshness: str) -> float:
         return 88
 
     temps = {
-        "light": 92,       # Lance: 90-93, rarely above 94
-        "medium-light": 91, # Sweet spot
-        "medium": 90,       # Lance's default baseline
+        "light": 92,  # Lance: 90-93, rarely above 94
+        "medium-light": 91,  # Sweet spot
+        "medium": 90,  # Lance's default baseline
         "medium-dark": 88,  # Sub-90 for darker
-        "dark": 86,         # Well sub-90
+        "dark": 86,  # Well sub-90
     }
     return temps.get(roast, 90)
 
@@ -123,11 +123,11 @@ def _base_ratio(roast: str, process: str, freshness: str) -> float:
         return 2.0
 
     ratios = {
-        "light": 2.8,        # Lance: 2.5-3.0 for light
+        "light": 2.8,  # Lance: 2.5-3.0 for light
         "medium-light": 2.5,  # Lance: 2.0-2.5
-        "medium": 2.2,        # Lance: 2.0-2.5
-        "medium-dark": 1.8,   # Lance: 1.8-2.0
-        "dark": 1.7,          # Lance: 1.5-2.0 max
+        "medium": 2.2,  # Lance: 2.0-2.5
+        "medium-dark": 1.8,  # Lance: 1.8-2.0
+        "dark": 1.7,  # Lance: 1.5-2.0 max
     }
     return ratios.get(roast, 2.0)
 
@@ -141,9 +141,18 @@ def auto_select_dose(roast: str, process: str) -> int:
     return 18
 
 
-def build_profile(label: str, roast: str, origin: str, process: str,
-                   dose: int, ratio: float, temp: float, strategy: str,
-                   style: str, freshness: str) -> dict:
+def build_profile(
+    label: str,
+    roast: str,
+    origin: str,
+    process: str,
+    dose: int,
+    ratio: float,
+    temp: float,
+    strategy: str,
+    style: str,
+    freshness: str,
+) -> dict:
     """Build a GaggiMate Pro profile dict."""
     target_weight = round(dose * ratio, 1)
 
@@ -162,7 +171,7 @@ def build_profile(label: str, roast: str, origin: str, process: str,
         "type": "pro",
         "description": description,
         "temperature": temp,
-        "phases": []
+        "phases": [],
     }
 
     builders = {
@@ -179,7 +188,16 @@ def build_profile(label: str, roast: str, origin: str, process: str,
     return profile
 
 
-def _phase(name, phase_type, valve, duration, pump, transition=None, targets=None, temperature=0):
+def _phase(
+    name: str,
+    phase_type: str,
+    valve: int,
+    duration: int,
+    pump: dict,
+    transition: dict | None = None,
+    targets: list[dict] | None = None,
+    temperature: int = 0,
+) -> dict:
     """Build a phase dict."""
     p = {
         "name": name,
@@ -199,27 +217,36 @@ def _phase(name, phase_type, valve, duration, pump, transition=None, targets=Non
 # Profile strategies — informed by Lance's videos
 # ============================================================
 
-def _bloom_phases(dose, target_weight, temp, roast, process):
+
+def _bloom_phases(dose: int, target_weight: float, temp: float, roast: str, process: str) -> list[dict]:
     """Blooming espresso: fill → bloom (no pump) → gentle ramp → brew.
     Lance's preferred for washed light/medium-light.
     Builds 6-7 bar, extended pre-infusion to degas CO2."""
     peak_pressure = 7 if roast in ("light", "medium-light") else 8
     return [
-        _phase("Fill", "preinfusion", 1, 4,
-               {"target": "flow", "pressure": 2, "flow": 4}),
-        _phase("Bloom", "preinfusion", 1, 8,
-               {"target": "flow", "pressure": 0, "flow": 0}),
-        _phase("Ramp", "brew", 1, 5,
-               {"target": "pressure", "pressure": peak_pressure, "flow": 4},
-               transition={"type": "ease-in", "duration": 4, "adaptive": 1},
-               targets=[{"type": "pressure", "operator": "gte", "value": peak_pressure - 0.5}]),
-        _phase("Brew", "brew", 1, 35,
-               {"target": "pressure", "pressure": peak_pressure, "flow": 4},
-               targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}]),
+        _phase("Fill", "preinfusion", 1, 4, {"target": "flow", "pressure": 2, "flow": 4}),
+        _phase("Bloom", "preinfusion", 1, 8, {"target": "flow", "pressure": 0, "flow": 0}),
+        _phase(
+            "Ramp",
+            "brew",
+            1,
+            5,
+            {"target": "pressure", "pressure": peak_pressure, "flow": 4},
+            transition={"type": "ease-in", "duration": 4, "adaptive": 1},
+            targets=[{"type": "pressure", "operator": "gte", "value": peak_pressure - 0.5}],
+        ),
+        _phase(
+            "Brew",
+            "brew",
+            1,
+            35,
+            {"target": "pressure", "pressure": peak_pressure, "flow": 4},
+            targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}],
+        ),
     ]
 
 
-def _turbo_phases(dose, target_weight, temp, roast, process):
+def _turbo_phases(dose: int, target_weight: float, temp: float, roast: str, process: str) -> list[dict]:
     """Turbo shot: coarser grind, high flow, low pressure, fast extraction.
     Lance's go-to for ultra lights, processed coffees, and aged beans.
     15-20s total, 2-6 bar, maximum extraction evenness."""
@@ -227,87 +254,117 @@ def _turbo_phases(dose, target_weight, temp, roast, process):
     flow_rate = 5.0 if process not in ("anaerobic", "co-ferment") else 4.0
     pressure_limit = 6 if roast in ("light", "medium-light") else 7
     return [
-        _phase("Fill", "preinfusion", 1, 3,
-               {"target": "flow", "pressure": 3, "flow": flow_rate}),
-        _phase("Turbo Brew", "brew", 1, 25,
-               {"target": "flow", "pressure": pressure_limit, "flow": flow_rate},
-               targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}]),
+        _phase("Fill", "preinfusion", 1, 3, {"target": "flow", "pressure": 3, "flow": flow_rate}),
+        _phase(
+            "Turbo Brew",
+            "brew",
+            1,
+            25,
+            {"target": "flow", "pressure": pressure_limit, "flow": flow_rate},
+            targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}],
+        ),
     ]
 
 
-def _lever_phases(dose, target_weight, temp, roast, process):
+def _lever_phases(dose: int, target_weight: float, temp: float, roast: str, process: str) -> list[dict]:
     """Lever-style: fill → PI → fast ramp to peak → natural decline.
     Lance's preferred for medium roasts. Mimics spring lever machines.
     Natural declining pressure gives thick, syrupy body."""
     peak = 9 if roast not in ("light", "medium-light") else 8
     return [
-        _phase("Fill", "preinfusion", 1, 4,
-               {"target": "flow", "pressure": 2, "flow": 5}),
-        _phase("Pre-infuse", "preinfusion", 1, 4,
-               {"target": "flow", "pressure": 2, "flow": 2}),
-        _phase("Ramp", "brew", 1, 3,
-               {"target": "pressure", "pressure": peak, "flow": 4},
-               transition={"type": "ease-in", "duration": 2, "adaptive": 1},
-               targets=[{"type": "pressure", "operator": "gte", "value": peak}]),
-        _phase("Hold Peak", "brew", 1, 6,
-               {"target": "pressure", "pressure": peak, "flow": 4}),
-        _phase("Decline", "brew", 1, 30,
-               {"target": "flow", "pressure": peak, "flow": -1},
-               transition={"type": "ease-out", "duration": 8, "adaptive": 1},
-               targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}]),
+        _phase("Fill", "preinfusion", 1, 4, {"target": "flow", "pressure": 2, "flow": 5}),
+        _phase("Pre-infuse", "preinfusion", 1, 4, {"target": "flow", "pressure": 2, "flow": 2}),
+        _phase(
+            "Ramp",
+            "brew",
+            1,
+            3,
+            {"target": "pressure", "pressure": peak, "flow": 4},
+            transition={"type": "ease-in", "duration": 2, "adaptive": 1},
+            targets=[{"type": "pressure", "operator": "gte", "value": peak}],
+        ),
+        _phase("Hold Peak", "brew", 1, 6, {"target": "pressure", "pressure": peak, "flow": 4}),
+        _phase(
+            "Decline",
+            "brew",
+            1,
+            30,
+            {"target": "flow", "pressure": peak, "flow": -1},
+            transition={"type": "ease-out", "duration": 8, "adaptive": 1},
+            targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}],
+        ),
     ]
 
 
-def _declining_phases(dose, target_weight, temp, roast, process):
+def _declining_phases(dose: int, target_weight: float, temp: float, roast: str, process: str) -> list[dict]:
     """Declining pressure: ramp to 9 bar → hold → controlled decline to 5-6 bar.
     For medium-dark and dark roasts. Traditional Italian-influenced.
     Lance: sustained 9 bar for body, then decline to reduce late-shot bitterness."""
     return [
-        _phase("Fill", "preinfusion", 1, 3,
-               {"target": "flow", "pressure": 3, "flow": 4}),
-        _phase("Pre-infuse", "preinfusion", 1, 4,
-               {"target": "pressure", "pressure": 3, "flow": 3}),
-        _phase("Ramp", "brew", 1, 3,
-               {"target": "pressure", "pressure": 9, "flow": 4},
-               transition={"type": "linear", "duration": 2, "adaptive": 1},
-               targets=[{"type": "pressure", "operator": "gte", "value": 9}]),
-        _phase("Hold 9 bar", "brew", 1, 8,
-               {"target": "pressure", "pressure": 9, "flow": 4}),
-        _phase("Decline", "brew", 1, 25,
-               {"target": "pressure", "pressure": 5.5, "flow": 4},
-               transition={"type": "linear", "duration": 10, "adaptive": 1},
-               targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}]),
+        _phase("Fill", "preinfusion", 1, 3, {"target": "flow", "pressure": 3, "flow": 4}),
+        _phase("Pre-infuse", "preinfusion", 1, 4, {"target": "pressure", "pressure": 3, "flow": 3}),
+        _phase(
+            "Ramp",
+            "brew",
+            1,
+            3,
+            {"target": "pressure", "pressure": 9, "flow": 4},
+            transition={"type": "linear", "duration": 2, "adaptive": 1},
+            targets=[{"type": "pressure", "operator": "gte", "value": 9}],
+        ),
+        _phase("Hold 9 bar", "brew", 1, 8, {"target": "pressure", "pressure": 9, "flow": 4}),
+        _phase(
+            "Decline",
+            "brew",
+            1,
+            25,
+            {"target": "pressure", "pressure": 5.5, "flow": 4},
+            transition={"type": "linear", "duration": 10, "adaptive": 1},
+            targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}],
+        ),
     ]
 
 
-def _flat_phases(dose, target_weight, temp, roast, process):
+def _flat_phases(dose: int, target_weight: float, temp: float, roast: str, process: str) -> list[dict]:
     """Classic flat 9 bar. Simple, predictable.
     Good starting point when unsure."""
     return [
-        _phase("Fill", "preinfusion", 1, 3,
-               {"target": "flow", "pressure": 3, "flow": 5}),
-        _phase("Pre-infuse", "preinfusion", 1, 5,
-               {"target": "pressure", "pressure": 3, "flow": 3}),
-        _phase("Ramp", "brew", 1, 3,
-               {"target": "pressure", "pressure": 9, "flow": 0},
-               transition={"type": "linear", "duration": 2, "adaptive": 1},
-               targets=[{"type": "pressure", "operator": "gte", "value": 9}]),
-        _phase("Brew 9 bar", "brew", 1, 35,
-               {"target": "pressure", "pressure": 9, "flow": 4},
-               targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}]),
+        _phase("Fill", "preinfusion", 1, 3, {"target": "flow", "pressure": 3, "flow": 5}),
+        _phase("Pre-infuse", "preinfusion", 1, 5, {"target": "pressure", "pressure": 3, "flow": 3}),
+        _phase(
+            "Ramp",
+            "brew",
+            1,
+            3,
+            {"target": "pressure", "pressure": 9, "flow": 0},
+            transition={"type": "linear", "duration": 2, "adaptive": 1},
+            targets=[{"type": "pressure", "operator": "gte", "value": 9}],
+        ),
+        _phase(
+            "Brew 9 bar",
+            "brew",
+            1,
+            35,
+            {"target": "pressure", "pressure": 9, "flow": 4},
+            targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}],
+        ),
     ]
 
 
-def _low_contact_phases(dose, target_weight, temp, roast, process):
+def _low_contact_phases(dose: int, target_weight: float, temp: float, roast: str, process: str) -> list[dict]:
     """Low contact / allongé: very fast, very low pressure.
     For ultra light geisha-type coffees.
     Lance: 1:3.5 ratio, ~20s, 1-3 bar, "like drinking hot juice"."""
     return [
-        _phase("Fill", "preinfusion", 1, 3,
-               {"target": "flow", "pressure": 2, "flow": 6}),
-        _phase("Low Contact Brew", "brew", 1, 30,
-               {"target": "flow", "pressure": 4, "flow": 5},
-               targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}]),
+        _phase("Fill", "preinfusion", 1, 3, {"target": "flow", "pressure": 2, "flow": 6}),
+        _phase(
+            "Low Contact Brew",
+            "brew",
+            1,
+            30,
+            {"target": "flow", "pressure": 4, "flow": 5},
+            targets=[{"type": "volumetric", "operator": "gte", "value": target_weight}],
+        ),
     ]
 
 
@@ -316,11 +373,15 @@ def main():
     parser.add_argument("--label", required=True)
     parser.add_argument("--roast", required=True, choices=["light", "medium-light", "medium", "medium-dark", "dark"])
     parser.add_argument("--origin", default="other")
-    parser.add_argument("--process", default="washed", choices=["washed", "natural", "honey", "anaerobic", "co-ferment", "unknown"])
+    parser.add_argument(
+        "--process", default="washed", choices=["washed", "natural", "honey", "anaerobic", "co-ferment", "unknown"]
+    )
     parser.add_argument("--dose", type=int, default=0)
     parser.add_argument("--ratio", type=float, default=0)
     parser.add_argument("--temp", type=float, default=0)
-    parser.add_argument("--strategy", default="auto", choices=["auto", "flat", "declining", "bloom", "lever", "turbo", "low-contact"])
+    parser.add_argument(
+        "--strategy", default="auto", choices=["auto", "flat", "declining", "bloom", "lever", "turbo", "low-contact"]
+    )
     parser.add_argument("--style", default="espresso", choices=["espresso", "ristretto", "lungo", "milk", "allonge"])
     parser.add_argument("--freshness", default="fresh", choices=["fresh", "rested", "aged"])
     parser.add_argument("--output", default="-")
@@ -342,10 +403,16 @@ def main():
         args.strategy = "low-contact"
 
     profile = build_profile(
-        label=args.label, roast=args.roast, origin=args.origin,
-        process=args.process, dose=args.dose, ratio=args.ratio,
-        temp=args.temp, strategy=args.strategy,
-        style=args.style, freshness=args.freshness,
+        label=args.label,
+        roast=args.roast,
+        origin=args.origin,
+        process=args.process,
+        dose=args.dose,
+        ratio=args.ratio,
+        temp=args.temp,
+        strategy=args.strategy,
+        style=args.style,
+        freshness=args.freshness,
     )
 
     output = json.dumps(profile, indent=2)
